@@ -1,10 +1,11 @@
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from django.shortcuts import render
 from django.contrib.auth import login
-from .serializers import UserRegistrationSerializer, LoginSerializer
+from .models import BorrowerFinancialProfile
+from .serializers import UserRegistrationSerializer, LoginSerializer, LoanRequestSerializer, BorrowerFinancialProfileSerializer
 
 class UserRegistrationAPIView(APIView):
     def post(self, request, *args, **kwargs):
@@ -30,3 +31,42 @@ def register_page(request):
 
 def login_page(request):
     return render(request, 'api/login.html')
+
+def borrower_page(request):
+    return render(request, 'api/borrower.html')
+
+class LoanRequestAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = LoanRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class FinancialProfileAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            profile = request.user.financial_profile
+            serializer = BorrowerFinancialProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except BorrowerFinancialProfile.DoesNotExist:
+            return Response({'detail': 'Financial profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            profile = request.user.financial_profile
+            serializer = BorrowerFinancialProfileSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except BorrowerFinancialProfile.DoesNotExist:
+            serializer = BorrowerFinancialProfileSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(user=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

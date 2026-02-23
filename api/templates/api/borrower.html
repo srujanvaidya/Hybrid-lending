@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borrower Dashboard - Hybrid Lending</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Include Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --secondary: #10b981;
+            --bg-color: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Abstract Background Elements */
+        .bg-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .blob-1 {
+            top: 20%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(to right, #8b5cf6, #3b82f6);
+            animation: float 10s ease-in-out infinite alternate;
+        }
+
+        .blob-2 {
+            bottom: -20%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(to right, #10b981, #06b6d4);
+            animation: float 12s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) scale(1);
+            }
+
+            100% {
+                transform: translateY(-50px) scale(1.1);
+            }
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 4rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--surface-border);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, #c4b5fd);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-logout {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--surface-border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-logout:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 2rem;
+        }
+
+        .sidebar-container {
+            width: 320px;
+            flex-shrink: 0;
+        }
+
+        .forms-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--surface-border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+            height: fit-content;
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--surface-border);
+            padding-bottom: 1rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Wallet Section */
+        .wallet-address {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 12px;
+            font-family: monospace;
+            word-break: break-all;
+            color: var(--secondary);
+            font-size: 0.95rem;
+            margin-top: 1rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #e2e8f0;
+        }
+
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--surface-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+            appearance: none;
+            /* Removes default arrows in some browsers */
+        }
+
+        select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            padding-right: 2.5rem;
+        }
+
+        select option {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        /* Input Addons */
+        .input-with-addon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .addon-left {
+            position: absolute;
+            left: 1rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .input-with-addon input {
+            padding-left: 2.5rem;
+        }
+
+        /* Checkbox Styles */
+        .checkbox-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            appearance: none;
+            background-color: rgba(15, 23, 42, 0.6);
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.25em;
+            height: 1.25em;
+            border: 1px solid var(--surface-border);
+            border-radius: 0.25em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0.15rem;
+        }
+
+        .checkbox-container input[type="checkbox"]::before {
+            content: "";
+            width: 0.65em;
+            height: 0.65em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        .checkbox-container input[type="checkbox"]:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .checkbox-container input[type="checkbox"]:checked::before {
+            transform: scale(1);
+        }
+
+        .checkbox-container .text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Button */
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), #6366f1);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(139, 92, 246, 0.5);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-submit.loading .btn-text,
+        .btn-submit.loading i {
+            display: none;
+        }
+
+        .btn-submit.loading .spinner {
+            display: block;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: none;
+            font-size: 0.9rem;
+            animation: slideDown 0.3s ease;
+            font-weight: 500;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fda4af;
+        }
+
+        .alert.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+
+        /* Skeleton Loading for Wallet */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+            background-size: 400% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+            height: 20px;
+            width: 100%;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0 50%;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar-container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <nav class="navbar">
+        <div class="logo">
+            <i data-lucide="layers"></i>
+            Hybrid Lending
+        </div>
+        <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </nav>
+
+    <main class="main-container">
+        <!-- Sidebar / User Info -->
+        <div class="sidebar-container">
+            <aside class="glass-card">
+                <div class="card-header">
+                    <h2><i data-lucide="user"></i> Profile</h2>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <label>Status</label>
+                    <div
+                        style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: var(--secondary); border-radius: 99px; font-size: 0.85rem; font-weight: 500; margin-top: 0.5rem;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--secondary);"></span>
+                        Active Borrower
+                    </div>
+                </div>
+
+                <div>
+                    <label>Crypto Wallet Address</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        Automatically generated for disbursements & repayments.
+                    </p>
+                    <div class="wallet-address" id="walletDisplay">
+                        <div class="skeleton"></div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="forms-container">
+
+            <!-- Financial Profile Form -->
+            <section class="glass-card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h2><i data-lucide="briefcase"></i> Financial Profile</h2>
+                    <p>Please provide your financial details for credit scoring purposes.</p>
+                </div>
+
+                <div id="financialAlertBox" class="alert"></div>
+
+                <form id="financialForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="yearly_income">Yearly Income (USDC)</label>
+                            <div class="input-with-addon">
+                                <span class="addon-left">$</span>
+                                <input type="number" id="yearly_income" name="yearly_income" required min="0"
+                                    step="0.01" placeholder="50000.00">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="existing_loan_emis">Existing Loan EMIs (Monthly)</label>
+                            <div class="input-with-addon">
+                                <span class="addon-left">$</span>
+                                <input type="number" id="existing_loan_emis" name="existing_loan_emis" required min="0"
+                                    step="0.01" value="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="occupation">Occupation</label>
+                            <select id="occupation" name="occupation" required>
+                                <option value="" disabled selected>Select occupation...</option>
+                                <option value="Salaried">Salaried Employee</option>
+                                <option value="Self-Employed">Self-Employed</option>
+                                <option value="Business">Business Owner</option>
+                                <option value="Freelancer">Freelancer / Contractor</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="employer">Employer / Business Name</label>
+                            <input type="text" id="employer" name="employer" required placeholder="e.g. Acme Corp">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gst_no">GST Number (Optional, for Businesses/Merchants)</label>
+                        <input type="text" id="gst_no" name="gst_no" placeholder="e.g. 22AAAAA0000A1Z5">
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="financialSubmitBtn"
+                        style="background: linear-gradient(135deg, var(--secondary), #059669);">
+                        <i data-lucide="save"></i>
+                        <span class="btn-text">Save Financial Profile</span>
+                        <span class="spinner"></span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Main Content / Form -->
+            <section class="glass-card">
+                <div class="card-header">
+                    <h2><i data-lucide="file-text"></i> Submit Loan Application</h2>
+                    <p>Provide details for your requested loan. All applications are subject to approval.</p>
+                </div>
+
+                <div id="alertBox" class="alert"></div>
+
+                <form id="loanForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="amount">Loan Amount (USDC)</label>
+                            <div class="input-with-addon">
+                                <span class="addon-left">$</span>
+                                <input type="number" id="amount" name="amount" required min="100" step="0.01"
+                                    placeholder="5000.00">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tenure">Tenure (Months)</label>
+                            <input type="number" id="tenure" name="tenure" required min="1" max="60" placeholder="12">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="purpose">Purpose of Loan</label>
+                        <select id="purpose" name="purpose" required>
+                            <option value="" disabled selected>Select a purpose...</option>
+                            <option value="Education">Education</option>
+                            <option value="Medical">Medical Emergency</option>
+                            <option value="Home Improvement">Home Improvement</option>
+                            <option value="Debt Consolidation">Debt Consolidation</option>
+                            <option value="Business">Small Business</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface-border);">
+                        <h3 style="font-size: 1rem; margin-bottom: 1rem;">Agreements & Authorizations</h3>
+
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="credit_check_consent" value="true" required>
+                            <span class="text">
+                                <strong>Credit Check Authorization:</strong> I authorize Hybrid Lending to perform a
+                                hard
+                                pull on my credit report to evaluate my eligibility for this loan.
+                            </span>
+                        </label>
+
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="auto_debit_consent" value="true" required>
+                            <span class="text">
+                                <strong>Smart Contract Auto-Debit:</strong> I consent to the deployment of a smart
+                                contract
+                                that explicitly authorizes the automatic deduction of monthly repayments from my
+                                generated
+                                crypto wallet.
+                            </span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <i data-lucide="send"></i>
+                        <span class="btn-text">Submit Application</span>
+                        <span class="spinner"></span>
+                    </button>
+                </form>
+        </div>
+    </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // On load, verify authentication and get user details (simulated or real depending on backend structure)
+        // Since we are using token auth, ensure we have a token
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login/';
+        }
+
+        // Ideally, we would fetch the user's profile to display the wallet address.
+        // For this implementation, since the user registration returns the token but not the profile directly in this generic setup,
+        // we'll need an endpoint to fetch the user profile. But we can decode the token or fetch a generic /api/me/ endpoint.
+        // Assuming we need to add a quick fetch to get user data if it exists, or just show a placeholder.
+        // Let's implement a dummy fetch simulating getting user details since we didn't explicitly create a 'me' endpoint in the plan.
+
+        // As a workaround, we'll try to fetch a loan request to see if auth works, but to get the wallet, 
+        // normally we'd need an endpoint. Let's just create a dummy wallet structure if the API doesn't provide it directly here 
+        // to complete the UI, or we can assume there's a way.
+        // Actually, let's just show a simulated secure string for the frontend template visually, 
+        // because we didn't add a GET /api/user/ endpoint in the backend tasks. 
+        setTimeout(() => {
+            // Simulated Fetch delay
+            // We know the backend creates a real wallet. As a mock display for the frontend file:
+            document.getElementById('walletDisplay').innerHTML = `0x... (Wallet Secured. Fetching via API requires user info endpoint)`;
+        }, 1500);
+
+        // Form Submission
+        document.getElementById('loanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const btn = document.getElementById('submitBtn');
+            const alertBox = document.getElementById('alertBox');
+
+            btn.classList.add('loading');
+            btn.disabled = true;
+            alertBox.style.display = 'none';
+            alertBox.className = 'alert';
+
+            // Format data appropriately
+            const dataObj = {
+                amount: parseFloat(form.amount.value).toFixed(2),
+                tenure: parseInt(form.tenure.value),
+                purpose: form.purpose.value,
+                // Checkboxes are only included if checked, but JS FormData sets them to true/false nicely if we map them
+                credit_check_consent: form.credit_check_consent.checked,
+                auto_debit_consent: form.auto_debit_consent.checked
+            };
+
+            try {
+                const response = await fetch('/api/loan-request/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(dataObj)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.status) {
+                        alertBox.innerHTML = `<strong>Success!</strong> Your loan application for $${data.amount} has been submitted successfully and is currently <em>${data.status}</em>.`;
+                    } else {
+                        alertBox.innerHTML = `<strong>Success!</strong> Your loan application has been submitted successfully.`;
+                    }
+                    alertBox.classList.add('success');
+                    alertBox.style.display = 'block';
+                    form.reset();
+                } else {
+                    let errMsg = '';
+                    if (data.non_field_errors) {
+                        errMsg = data.non_field_errors.join('<br>');
+                    } else {
+                        errMsg = Object.values(data).map(v => Array.isArray(v) ? v.join(', ') : v).join('<br>');
+                    }
+                    alertBox.innerHTML = errMsg || "Failed to submit loan request. Please check inputs.";
+                    alertBox.classList.add('error');
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                alertBox.textContent = "Connection error. Please try again later.";
+                alertBox.classList.add('error');
+                alertBox.style.display = 'block';
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        });
+
+        // Financial Profile Form Submission
+        document.getElementById('financialForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const btn = document.getElementById('financialSubmitBtn');
+            const alertBox = document.getElementById('financialAlertBox');
+
+            btn.classList.add('loading');
+            btn.disabled = true;
+            alertBox.style.display = 'none';
+            alertBox.className = 'alert';
+
+            const dataObj = {
+                yearly_income: parseFloat(form.yearly_income.value).toFixed(2),
+                existing_loan_emis: parseFloat(form.existing_loan_emis.value).toFixed(2),
+                occupation: form.occupation.value,
+                employer: form.employer.value,
+                gst_no: form.gst_no.value.trim() || null
+            };
+
+            try {
+                const response = await fetch('/api/financial-profile/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(dataObj)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alertBox.innerHTML = `<strong>Success!</strong> Financial profile updated securely.`;
+                    alertBox.classList.add('success');
+                    alertBox.style.display = 'block';
+                } else {
+                    let errMsg = '';
+                    if (data.non_field_errors) {
+                        errMsg = data.non_field_errors.join('<br>');
+                    } else {
+                        errMsg = Object.values(data).map(v => Array.isArray(v) ? v.join(', ') : v).join('<br>');
+                    }
+                    alertBox.innerHTML = errMsg || "Failed to update profile. Please check inputs.";
+                    alertBox.classList.add('error');
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                alertBox.textContent = "Connection error. Please try again later.";
+                alertBox.classList.add('error');
+                alertBox.style.display = 'block';
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login/';
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+
+</html>

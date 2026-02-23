@@ -50,8 +50,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if role == 'Lender':
             try:
                 w3 = Web3(Web3.HTTPProvider(settings.WEB3_PROVIDER_URI))
-                from web3.middleware import geth_poa_middleware
-                w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+                from web3.middleware import ExtraDataToPOAMiddleware
+                w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
                 
                 if w3.is_connected() and settings.OWNER_PRIVATE_KEY and settings.TOKEN_CONTRACT_ADDRESS:
                     contract = w3.eth.contract(address=Web3.to_checksum_address(settings.TOKEN_CONTRACT_ADDRESS), abi=MINIMAL_ERC20_ABI)
@@ -95,10 +95,24 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 class LoanRequestSerializer(serializers.ModelSerializer):
+    monthly_emi = serializers.SerializerMethodField()
+
     class Meta:
         model = LoanRequest
-        fields = ('id', 'amount', 'tenure', 'purpose', 'credit_check_consent', 'auto_debit_consent', 'status', 'created_at')
-        read_only_fields = ('status', 'created_at')
+        fields = ('id', 'amount', 'tenure', 'purpose', 'credit_check_consent', 'auto_debit_consent', 'status', 'created_at', 'monthly_emi')
+        read_only_fields = ('status', 'created_at', 'monthly_emi')
+
+    def get_monthly_emi(self, obj):
+        try:
+            P = float(obj.amount)
+            n = int(obj.tenure)
+            if P > 0 and n > 0:
+                r = 0.16 / 12  # 16% Annual Rate
+                emi = (P * r * (1 + r)**n) / ((1 + r)**n - 1)
+                return round(emi, 2)
+        except (TypeError, ValueError):
+            pass
+        return 0.00
 
     def validate(self, attrs):
         if not attrs.get('credit_check_consent') or not attrs.get('auto_debit_consent'):

@@ -189,33 +189,8 @@ class UserDashboardDataAPIView(APIView):
             token_balance = "Error"
 
         # 2. Calculate Credit Score
-        # A simple algorithmic score starting at a baseline 600.
-        credit_score = 600 
-        
-        try:
-            profile = user.financial_profile
-            # Boost score based on debt-to-income ratio roughly
-            yearly_income = float(profile.yearly_income)
-            monthly_income = yearly_income / 12
-            monthly_emis = float(profile.existing_loan_emis)
-            
-            if monthly_income > 0:
-                dti = monthly_emis / monthly_income
-                if dti < 0.2:
-                    credit_score += 150 # Excellent ratio
-                elif dti < 0.4:
-                    credit_score += 75  # Good ratio
-                elif dti > 0.6:
-                    credit_score -= 100 # Risky ratio
-        except BorrowerFinancialProfile.DoesNotExist:
-            pass # No financial profile submitted yet
-
-        # Factor in loan requests
-        approved_loans = LoanRequest.objects.filter(user=user, status='Approved').count()
-        credit_score += (approved_loans * 20)
-        
-        # Max score cap at 850, min floor at 300
-        credit_score = min(max(int(credit_score), 300), 850)
+        # Hardcoded to 0 as requested for simplified testing
+        credit_score = 0
 
         # 3. Transaction / Activity History
         if user.role == 'Borrower':

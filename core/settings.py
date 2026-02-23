@@ -10,7 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -133,3 +137,11 @@ AUTH_USER_MODEL = 'api.User'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Web3 / Blockchain Settings
+# Using Polygon Amoy Testnet RPC since contracts are deployed there
+WEB3_PROVIDER_URI = os.getenv('WEB3_PROVIDER_URI', 'https://rpc-amoy.polygon.technology/')
+TOKEN_CONTRACT_ADDRESS = os.getenv('TOKEN_CONTRACT_ADDRESS')
+ESCROW_CONTRACT_ADDRESS = os.getenv('ESCROW_CONTRACT_ADDRESS')
+OWNER_ADDRESS = os.getenv('OWNER_ADDRESS')
+OWNER_PRIVATE_KEY = os.getenv('OWNER_PRIVATE_KEY')

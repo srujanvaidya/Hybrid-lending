@@ -466,11 +466,11 @@
                 </div>
 
                 <div>
-                    <label>Crypto Wallet Address</label>
+                    <label>Available Token Balance</label>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                        Automatically generated for disbursements & repayments.
+                        Synced securely via Web3.
                     </p>
-                    <div class="wallet-address" id="walletDisplay">
+                    <div class="wallet-address" id="balanceDisplay" style="font-size: 1.2rem;">
                         <div class="skeleton"></div>
                     </div>
                 </div>
@@ -622,22 +622,31 @@
             window.location.href = '/login/';
         }
 
-        // Ideally, we would fetch the user's profile to display the wallet address.
-        // For this implementation, since the user registration returns the token but not the profile directly in this generic setup,
-        // we'll need an endpoint to fetch the user profile. But we can decode the token or fetch a generic /api/me/ endpoint.
-        // Assuming we need to add a quick fetch to get user data if it exists, or just show a placeholder.
-        // Let's implement a dummy fetch simulating getting user details since we didn't explicitly create a 'me' endpoint in the plan.
+        async function initBorrowerPage() {
+            try {
+                const dashResponse = await fetch('/api/dashboard-data/', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Token ${token}` }
+                });
+                if (dashResponse.ok) {
+                    const dashData = await dashResponse.json();
 
-        // As a workaround, we'll try to fetch a loan request to see if auth works, but to get the wallet, 
-        // normally we'd need an endpoint. Let's just create a dummy wallet structure if the API doesn't provide it directly here 
-        // to complete the UI, or we can assume there's a way.
-        // Actually, let's just show a simulated secure string for the frontend template visually, 
-        // because we didn't add a GET /api/user/ endpoint in the backend tasks. 
-        setTimeout(() => {
-            // Simulated Fetch delay
-            // We know the backend creates a real wallet. As a mock display for the frontend file:
-            document.getElementById('walletDisplay').innerHTML = `0x... (Wallet Secured. Fetching via API requires user info endpoint)`;
-        }, 1500);
+                    // Role Guard
+                    if (dashData.user.role !== 'Borrower') {
+                        window.location.href = '/home/';
+                        return;
+                    }
+
+                    document.getElementById('balanceDisplay').innerHTML = `${dashData.balance} <strong>HLT</strong>`;
+                } else {
+                    document.getElementById('balanceDisplay').innerHTML = `Error fetching balance`;
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('balanceDisplay').innerHTML = `Error fetching balance`;
+            }
+        }
+        initBorrowerPage();
 
         // Form Submission
         document.getElementById('loanForm').addEventListener('submit', async (e) => {

@@ -1,15 +1,30 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User, LoanRequest, BorrowerFinancialProfile
+from .models import User, LoanRequest, BorrowerFinancialProfile, LenderPreference
 from eth_account import Account
 import secrets
+from web3 import Web3
+from django.conf import settings
+
+MINIMAL_ERC20_ABI = [
+    {
+        "constant": False,
+        "inputs": [
+            {"name": "to", "type": "address"},
+            {"name": "amount", "type": "uint256"}
+        ],
+        "name": "mint",
+        "outputs": [],
+        "type": "function"
+    }
+]
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'mobile_no', 'kyc_pdf', 'wallet_address')
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'mobile_no', 'kyc_pdf', 'role', 'wallet_address')
         read_only_fields = ('wallet_address',)
 
     def create(self, validated_data):
@@ -18,6 +33,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         private_key = "0x" + priv
         acct = Account.from_key(private_key)
 
+        role = validated_data.get('role', 'Borrower')
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
@@ -26,8 +42,38 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             mobile_no=validated_data.get('mobile_no', ''),
             kyc_pdf=validated_data.get('kyc_pdf', None),
             wallet_address=acct.address,
-            private_key=private_key
+            private_key=private_key,
+            role=role
         )
+
+        # Web3 Minting Logic
+        if role == 'Lender':
+            try:
+                w3 = Web3(Web3.HTTPProvider(settings.WEB3_PROVIDER_URI))
+                from web3.middleware import geth_poa_middleware
+                w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+                
+                if w3.is_connected() and settings.OWNER_PRIVATE_KEY and settings.TOKEN_CONTRACT_ADDRESS:
+                    contract = w3.eth.contract(address=Web3.to_checksum_address(settings.TOKEN_CONTRACT_ADDRESS), abi=MINIMAL_ERC20_ABI)
+                    owner_addr = Web3.to_checksum_address(settings.OWNER_ADDRESS)
+                    nonce = w3.eth.get_transaction_count(owner_addr)
+                    amount_to_mint = int(5000 * 10**18)
+                    
+                    tx = contract.functions.mint(
+                        Web3.to_checksum_address(acct.address),
+                        amount_to_mint
+                    ).build_transaction({
+                        'from': owner_addr,
+                        'nonce': nonce,
+                    })
+                    
+                    signed_tx = w3.eth.account.sign_transaction(tx, private_key=settings.OWNER_PRIVATE_KEY)
+                    tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                    # Log or print success dynamically
+                    print(f"Minted 5000 tokens to {acct.address}. TX Hash: {tx_hash.hex()}")
+            except Exception as e:
+                print(f"Web3 Minting Error: {e}")
+
         return user
 
 class LoginSerializer(serializers.Serializer):
@@ -63,4 +109,14 @@ class BorrowerFinancialProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = BorrowerFinancialProfile
         fields = ('id', 'yearly_income', 'occupation', 'employer', 'existing_loan_emis', 'gst_no', 'created_at', 'updated_at')
+        read_only_fields = ('created_at', 'updated_at')
+
+class LenderPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LenderPreference
+        fields = (
+            'id', 'risk_appetite', 'total_lending_amount', 
+            'time_period_months', 'auto_reinvest', 'withdrawal_preference',
+            'created_at', 'updated_at'
+        )
         read_only_fields = ('created_at', 'updated_at')

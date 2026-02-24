@@ -28,6 +28,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*'] # Required for Render. Consider replacing with your actual Render URL later.
 
+CORS_ALLOWED_ORIGINS = [
+    "https://credx-p2p.netlify.app",
+]
+CORS_ALLOW_CREDENTIALS = True
+
 
 # Application definition
 
@@ -38,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
     'api',
@@ -45,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

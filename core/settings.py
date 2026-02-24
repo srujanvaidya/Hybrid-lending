@@ -80,7 +80,10 @@ WSGI_APPLICATION = 'core.wsgi.application'
 import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.parse('postgresql://hybrid_lending_system_user:C0GQ1pNSLx5yJq7GZqfY6fxiz0dcfT5w@dpg-d6dh427pm1nc739qfkj0-a.oregon-postgres.render.com/hybrid_lending_system')
+    'default': dj_database_url.parse(
+        'postgresql://hybrid_lending_system_user:C0GQ1pNSLx5yJq7GZqfY6fxiz0dcfT5w@dpg-d6dh427pm1nc739qfkj0-a.oregon-postgres.render.com/hybrid_lending_system',
+        conn_max_age=600
+    )
 }
 
 

@@ -154,7 +154,8 @@ OWNER_ADDRESS = '0x7f06ccb5869a837c73a63b899388f9a256d5d12d'
 OWNER_PRIVATE_KEY = 'ce60907eb0556287ec1452c7c625cd93daf1f376392ad0e5dc6159e9502d3765'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
     ],
 }

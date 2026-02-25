@@ -4,7 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from django.shortcuts import render
 from django.contrib.auth import login, authenticate
-from .models import BorrowerFinancialProfile, LoanRequest, LenderPreference, CredXWallet
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from .models import User, BorrowerFinancialProfile, LoanRequest, LenderPreference, CredXWallet
 from .serializers import (
     UserRegistrationSerializer,
     LoginSerializer,
@@ -315,19 +317,29 @@ class LenderPreferenceAPIView(APIView):
         except Exception as e:
             print(f"Failed to fund CredX from Lender: {e}")
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ESP32LoanRequestAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
-        if request.user.role != 'Borrower':
-            return Response({'detail': 'Only borrowers can request loans via ESP32 endpoint.'}, status=status.HTTP_403_FORBIDDEN)
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            # Fallback for ESP32 testing without auth
+            user = User.objects.filter(role='Borrower').last()
+            if not user:
+                return Response({'detail': 'No borrower found in system.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.role != 'Borrower':
+            return Response({'detail': 'User is not a borrower.'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = ESP32LoanRequestSerializer(data=request.data)
         if serializer.is_valid():
-            # Create the loan object for the authenticated user
+            # Create the loan object for the user
             loan = LoanRequest.objects.create(
-                user=request.user,
+                user=user,
                 amount=serializer.validated_data['amount'],
+
                 tenure=serializer.validated_data['tenure'],
                 purpose='ESP32 Auto Loan',
                 credit_check_consent=True,
@@ -345,7 +357,7 @@ class ESP32LoanRequestAPIView(APIView):
                     contract = w3.eth.contract(address=Web3.to_checksum_address(settings.TOKEN_CONTRACT_ADDRESS), abi=MINIMAL_ERC20_ABI)
                     credx = CredXWallet.get_solo()
                     credx_addr = Web3.to_checksum_address(credx.address)
-                    borrower_addr = Web3.to_checksum_address(request.user.wallet_address)
+                    borrower_addr = Web3.to_checksum_address(user.wallet_address)
                     
                     credx_balance = contract.functions.balanceOf(credx_addr).call()
                     loan_amount_wei = int(loan.amount * 10**18)

@@ -5,6 +5,9 @@ from eth_account import Account
 import secrets
 from web3 import Web3
 from django.conf import settings
+from rest_framework.permissions import AllowAny
+
+permission_classes = [AllowAny]
 
 MINIMAL_ERC20_ABI = [
     {

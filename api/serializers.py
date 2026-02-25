@@ -134,3 +134,17 @@ class LenderPreferenceSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         )
         read_only_fields = ('created_at', 'updated_at')
+
+class ESP32LoanRequestSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    tenure = serializers.IntegerField(help_text="Tenure in months")
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+    def validate_tenure(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Tenure must be greater than zero.")
+        return value

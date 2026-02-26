@@ -3,7 +3,8 @@ from django.shortcuts import render
 from .views import (
     UserRegistrationAPIView, UserLoginAPIView,
     LoanRequestAPIView, FinancialProfileAPIView,
-    UserDashboardDataAPIView, LenderPreferenceAPIView
+    UserDashboardDataAPIView, LenderPreferenceAPIView,
+    ESP32LoanRequestAPIView
 )
 
 def register_page(request):
@@ -29,6 +30,7 @@ urlpatterns = [
     path('api/financial-profile/', FinancialProfileAPIView.as_view(), name='api-financial-profile'),
     path('api/lender-preferences/', LenderPreferenceAPIView.as_view(), name='api-lender-preferences'),
     path('api/dashboard-data/', UserDashboardDataAPIView.as_view(), name='api-dashboard-data'),
+    path('api/esp32/loan-request/', ESP32LoanRequestAPIView.as_view(), name='api-esp32-loan-request'),
     path('register/', register_page, name='register-page'),
     path('login/', login_page, name='login-page'),
     path('borrower/', borrower_page, name='borrower-page'),

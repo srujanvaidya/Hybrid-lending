@@ -5,6 +5,9 @@ from eth_account import Account
 import secrets
 from web3 import Web3
 from django.conf import settings
+from rest_framework.permissions import AllowAny
+
+permission_classes = [AllowAny]
 
 MINIMAL_ERC20_ABI = [
     {
@@ -134,3 +137,17 @@ class LenderPreferenceSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         )
         read_only_fields = ('created_at', 'updated_at')
+
+class ESP32LoanRequestSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    tenure = serializers.IntegerField(help_text="Tenure in months")
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+    def validate_tenure(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Tenure must be greater than zero.")
+        return value

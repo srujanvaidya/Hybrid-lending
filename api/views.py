@@ -4,13 +4,16 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from django.shortcuts import render
 from django.contrib.auth import login, authenticate
-from .models import BorrowerFinancialProfile, LoanRequest, LenderPreference, CredXWallet
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from .models import User, BorrowerFinancialProfile, LoanRequest, LenderPreference, CredXWallet
 from .serializers import (
     UserRegistrationSerializer,
     LoginSerializer,
     LoanRequestSerializer,
     BorrowerFinancialProfileSerializer,
-    LenderPreferenceSerializer
+    LenderPreferenceSerializer,
+    ESP32LoanRequestSerializer
 )
 from django.conf import settings
 from web3 import Web3
@@ -313,3 +316,102 @@ class LenderPreferenceAPIView(APIView):
                 print(f"Lender funded CredX: {tx_hash.hex()}")
         except Exception as e:
             print(f"Failed to fund CredX from Lender: {e}")
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ESP32LoanRequestAPIView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            # Fallback for ESP32 testing without auth
+            user = User.objects.filter(role='Borrower').last()
+            if not user:
+                return Response({'detail': 'No borrower found in system.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.role != 'Borrower':
+            return Response({'detail': 'User is not a borrower.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ESP32LoanRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            # Create the loan object for the user
+            loan = LoanRequest.objects.create(
+                user=user,
+                amount=serializer.validated_data['amount'],
+
+                tenure=serializer.validated_data['tenure'],
+                purpose='ESP32 Auto Loan',
+                credit_check_consent=True,
+                auto_debit_consent=True,
+                status='Pending'
+            )
+            
+            # Check CredX balance and fund Borrower
+            try:
+                w3 = Web3(Web3.HTTPProvider(settings.WEB3_PROVIDER_URI))
+                from web3.middleware import ExtraDataToPOAMiddleware
+                w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+                
+                if w3.is_connected() and settings.TOKEN_CONTRACT_ADDRESS:
+                    contract = w3.eth.contract(address=Web3.to_checksum_address(settings.TOKEN_CONTRACT_ADDRESS), abi=MINIMAL_ERC20_ABI)
+                    credx = CredXWallet.get_solo()
+                    credx_addr = Web3.to_checksum_address(credx.address)
+                    borrower_addr = Web3.to_checksum_address(user.wallet_address)
+                    
+                    credx_balance = contract.functions.balanceOf(credx_addr).call()
+                    loan_amount_wei = int(loan.amount * 10**18)
+                    
+                    if credx_balance >= loan_amount_wei:
+                        # Gas Station Logic: Ensure CredX Wallet has MATIC to pay gas fees
+                        owner_addr = Web3.to_checksum_address(settings.OWNER_ADDRESS)
+                        native_balance = w3.eth.get_balance(credx_addr)
+                        if native_balance < int(2 * 10**15): # < 0.002 MATIC
+                            print("CredX Wallet needs gas (ESP32). Funding from Owner wallet...")
+                            gas_tx = {
+                                'to': credx_addr,
+                                'value': int(5 * 10**15), # 0.005 MATIC
+                                'gas': 21000,
+                                'gasPrice': w3.eth.gas_price,
+                                'nonce': w3.eth.get_transaction_count(owner_addr),
+                                'chainId': w3.eth.chain_id
+                            }
+                            signed_gas_tx = w3.eth.account.sign_transaction(gas_tx, private_key=settings.OWNER_PRIVATE_KEY)
+                            gas_tx_hash = w3.eth.send_raw_transaction(signed_gas_tx.raw_transaction)
+                            print(f"Sent gas prep: {gas_tx_hash.hex()}")
+                            w3.eth.wait_for_transaction_receipt(gas_tx_hash, timeout=120)
+                            print("Gas funded.")
+                            
+                        # Approve and Transfer
+                        nonce = w3.eth.get_transaction_count(credx_addr)
+                        tx = contract.functions.transfer(
+                            borrower_addr,
+                            loan_amount_wei
+                        ).build_transaction({
+                            'from': credx_addr,
+                            'nonce': nonce,
+                        })
+                        signed_tx = w3.eth.account.sign_transaction(tx, private_key=credx.private_key)
+                        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                        print(f"CredX funded Borrower via ESP32 {loan.amount} USDC: {tx_hash.hex()}")
+                        
+                        loan.status = 'Approved'
+                        loan.save()
+                        return Response({
+                            'message': 'Loan approved and funded successfully.',
+                            'tx_hash': tx_hash.hex(),
+                            'amount': loan.amount,
+                            'status': loan.status
+                        }, status=status.HTTP_201_CREATED)
+                    else:
+                        print("Insufficient funds in CredX Wallet to fund the ESP32 loan.")
+                        loan.delete()
+                        return Response({'detail': 'Insufficient Platform liquidity for ESP32 funding.'}, status=status.HTTP_400_BAD_REQUEST)
+                        
+            except Exception as e:
+                loan.delete()
+                print(f"Failed to process ESP32 loan funding: {e}")
+                return Response({'detail': 'Blockchain error during ESP32 funding.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

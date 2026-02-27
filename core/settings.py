@@ -26,10 +26,10 @@ SECRET_KEY = 'django-insecure-!)aykgs0#!6ytamim1eqvpdet8!mwx%70(ql^7q^kmd^)%(^z9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*'] # Required for Render. Consider replacing with your actual Render URL later.
+ALLOWED_HOSTS = ['.onrender.com'] # Required for Render. Consider replacing with your actual Render URL later.
 
 CORS_ALLOWED_ORIGINS = [
-    "https://credx-p2p.netlify.app",
+    "https://credx-p2p.netlify.app"
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -154,8 +154,10 @@ OWNER_ADDRESS = '0x7f06ccb5869a837c73a63b899388f9a256d5d12d'
 OWNER_PRIVATE_KEY = 'ce60907eb0556287ec1452c7c625cd93daf1f376392ad0e5dc6159e9502d3765'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }

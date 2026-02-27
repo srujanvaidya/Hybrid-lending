@@ -1,0 +1,216 @@
+{
+  "project_name": "Hybrid-lending",
+  "base_path": "/api",
+  "authentication": {
+    "type": "Token Authentication",
+    "header": "Authorization: Token <token_value>"
+  },
+  "roles": [
+    "Borrower",
+    "Lender"
+  ],
+  "models": {
+    "User": {
+      "fields": {
+        "email": "string (unique) - Used as Username",
+        "first_name": "string",
+        "last_name": "string",
+        "mobile_no": "string (max_length=15)",
+        "role": "string (choices: Borrower, Lender)",
+        "wallet_address": "string - Read Only (auto-generated)",
+        "kyc_pdf": "File"
+      }
+    },
+    "LoanRequest": {
+      "fields": {
+        "id": "integer",
+        "amount": "decimal",
+        "tenure": "integer (months)",
+        "purpose": "string",
+        "monthly_emi": "decimal - Read Only",
+        "credit_check_consent": "boolean (must be true)",
+        "auto_debit_consent": "boolean (must be true)",
+        "status": "string (default: Approved)",
+        "created_at": "datetime"
+      }
+    },
+    "BorrowerFinancialProfile": {
+      "fields": {
+        "id": "integer",
+        "yearly_income": "decimal",
+        "occupation": "string",
+        "employer": "string",
+        "existing_loan_emis": "decimal",
+        "gst_no": "string (optional)",
+        "updated_at": "datetime"
+      }
+    },
+    "LenderPreference": {
+      "fields": {
+        "id": "integer",
+        "risk_appetite": "string (Low, Medium, High)",
+        "total_lending_amount": "decimal (USDC)",
+        "time_period_months": "integer",
+        "auto_reinvest": "boolean",
+        "withdrawal_preference": "string (Monthly Interest, End of Term, Manual)",
+        "updated_at": "datetime"
+      }
+    }
+  },
+  "endpoints": {
+    "Authentication": [
+      {
+        "name": "Register User",
+        "path": "/api/register/",
+        "method": "POST",
+        "auth_required": false,
+        "payload": {
+          "email": "user@example.com",
+          "password": "strongpassword",
+          "first_name": "John",
+          "last_name": "Doe",
+          "mobile_no": "+1234567890",
+          "role": "Borrower"
+        },
+        "response": {
+          "token": "token_string",
+          "message": "Registration successful"
+        }
+      },
+      {
+        "name": "Login User",
+        "path": "/api/login/",
+        "method": "POST",
+        "auth_required": false,
+        "payload": {
+          "email": "user@example.com",
+          "password": "strongpassword"
+        },
+        "response": {
+          "token": "token_string",
+          "message": "Login successful"
+        }
+      }
+    ],
+    "Borrower": [
+      {
+        "name": "Create/Update Financial Profile",
+        "path": "/api/financial-profile/",
+        "method": "POST",
+        "auth_required": true,
+        "role_required": "Borrower",
+        "payload": {
+          "yearly_income": 50000.00,
+          "occupation": "Software Engineer",
+          "employer": "Tech Corp",
+          "existing_loan_emis": 500.00,
+          "gst_no": "OptionalGST"
+        },
+        "response": "Returns created/updated BorrowerFinancialProfile object"
+      },
+      {
+        "name": "Get Financial Profile",
+        "path": "/api/financial-profile/",
+        "method": "GET",
+        "auth_required": true,
+        "role_required": "Borrower",
+        "response": "Returns the logged-in user's BorrowerFinancialProfile object"
+      },
+      {
+        "name": "Request Loan",
+        "path": "/api/loan-request/",
+        "method": "POST",
+        "auth_required": true,
+        "role_required": "Borrower",
+        "payload": {
+          "amount": 1000.00,
+          "tenure": 12,
+          "purpose": "Home Renovation",
+          "credit_check_consent": true,
+          "auto_debit_consent": true
+        },
+        "response": "Returns LoanRequest object with calculated 'monthly_emi' and 'status'"
+      }
+    ],
+    "Lender": [
+      {
+        "name": "Create/Update Lender Preferences",
+        "path": "/api/lender-preferences/",
+        "method": "POST",
+        "auth_required": true,
+        "role_required": "Lender",
+        "payload": {
+          "risk_appetite": "Medium",
+          "total_lending_amount": 5000.00,
+          "time_period_months": 24,
+          "auto_reinvest": false,
+          "withdrawal_preference": "Monthly Interest"
+        },
+        "response": "Returns created/updated LenderPreference object"
+      },
+      {
+        "name": "Get Lender Preferences",
+        "path": "/api/lender-preferences/",
+        "method": "GET",
+        "auth_required": true,
+        "role_required": "Lender",
+        "response": "Returns the logged-in user's LenderPreference object"
+      }
+    ],
+    "Dashboard": [
+      {
+        "name": "Get User Dashboard Data",
+        "path": "/api/dashboard-data/",
+        "method": "GET",
+        "auth_required": true,
+        "response": {
+          "user": {
+            "name": "John Doe",
+            "email": "user@example.com",
+            "role": "Borrower",
+            "wallet_address": "0x123..."
+          },
+          "balance": "0.00 (string formatting representing balance out of 10^18)",
+          "credit_score": 0,
+          "recent_activity": [
+            {
+              "amount": 1000.0,
+              "tenure": 12,
+              "purpose": "Home Renovation",
+              "status": "Approved"
+            }
+          ]
+        },
+        "note": "Includes 'lender_stats' if the user is a Lender."
+      }
+    ]
+  },
+  "schema_and_feature_changes": {
+    "schema_changes": {
+      "User": {
+        "address": "string",
+        "kyc_status": "string (choices: Pending, Verified, Rejected)"
+      },
+      "new_endpoints": [
+        {
+          "name": "Profile Update",
+          "path": "/api/profile-update/",
+          "method": "PUT",
+          "description": "Allows user to provide address and phone number after registration."
+        },
+        {
+          "name": "KYC Upload",
+          "path": "/api/kyc-upload/",
+          "method": "POST",
+          "description": "Accepts multipart/form-data for PDF document uploads."
+        }
+      ]
+    },
+    "feature_changes": {
+      "Profile Completeness Gate": "Enforce that a user cannot access Borrower/Lender forms until profile is 100% complete (first_name, last_name, Indian mobile_no, full address).",
+      "KYC Verification Step": "Prompt KYC Document (PDF) upload after profile completion, changing state to Pending. Admin review needed before applying for loans or investing.",
+      "Dedicated Profile Page": "Reusable React component to view wallet address, update info, check KYC status, and track history.",
+      "Validation Polish": "Strict Indian mobile number validation on frontend (React) and backend (Django)."
+    }
+  }
+}

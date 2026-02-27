@@ -11,6 +11,7 @@ ckzg==2.1.5
 cytoolz==1.1.0
 dj-database-url==3.1.2
 Django==6.0.2
+django-cors-headers==4.9.0
 djangorestframework==3.16.1
 eth-account==0.13.7
 eth-hash==0.7.1
@@ -46,4 +47,3 @@ web3==7.14.1
 websockets==15.0.1
 whitenoise==6.11.0
 yarl==1.22.0
-django-cors-headers==4.3.1

@@ -28,9 +28,7 @@ DEBUG = os.environ.get("DEBUG") == "True"
 
 ALLOWED_HOSTS = ['.onrender.com'] # Required for Render. Consider replacing with your actual Render URL later.
 
-CORS_ALLOWED_ORIGINS = [
-    "https://credx-p2p.netlify.app"
-]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 
